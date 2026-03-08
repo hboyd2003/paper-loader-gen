@@ -1,0 +1,5 @@
+name: TestPlugin
+version: '1.0'
+loader: dev.hboyd.testplugin.TestPluginLoader
+main: dev.hboyd.testplugin.TestPlugin
+api-version: '1.21.8'

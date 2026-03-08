@@ -1,0 +1,9 @@
+build
+/.idea/libraries
+/.idea/workspace.xml
+/.gradle
+/.idea/modules
+/.idea/modules.xml
+/.idea/misc.xml
+/.idea/compiler.xml
+local.properties
