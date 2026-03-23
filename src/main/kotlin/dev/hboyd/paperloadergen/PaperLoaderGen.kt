@@ -20,7 +20,9 @@ package dev.hboyd.paperloadergen
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.internal.GradleInternal
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
@@ -36,19 +38,25 @@ abstract class PaperLoaderGen : Plugin<Project> {
             it.extendsFrom( configurations.getByName("compileOnly"))
         }
 
-        val generatedOutputDir: Path = project.layout.buildDirectory.get().asFile.toPath()
+        val generatedOutputDir: Path = layout.buildDirectory.get().asFile.toPath()
             .resolve("generated/PaperLoaderGen/main")
 
-        val paperLoaderGenTask: TaskProvider<PaperLoaderGenTask> = project.tasks.register("generatePaperLoader", PaperLoaderGenTask::class.java) {
-            val filteredRepositories = project.repositories
+        val paperLoaderGenTask: TaskProvider<PaperLoaderGenTask> = tasks.register("generatePaperLoader", PaperLoaderGenTask::class.java) { task ->
+            val allRepositories: ArrayList<ArtifactRepository> = ArrayList()
+            allRepositories.addAll(repositories)
+
+            // Required do to https://github.com/gradle/gradle/issues/16616
+            allRepositories.addAll((project.gradle as GradleInternal).settings.dependencyResolutionManagement.repositories)
+
+            val filteredRepositories = allRepositories
                 .filterIsInstance<MavenArtifactRepository>()
                 .filter { repo -> !repo.url.toString().startsWith("file") }
-                .filter { repo -> !repo.url.toString().contains("repo.maven.apache.org/maven2/") } // Remove central repo which is against TOS
-                .associateBy { repo -> repo.url }
+                .filter { repo -> !repo.url.toString().contains("repo.maven.apache.org/maven2/") } // Remove central repo which is against TOS to use
+                .toList()
 
-            it.repositories.convention(filteredRepositories.values)
-            it.dependencies.convention(project.configurations.getByName("paperRuntime").dependencies)
-            it.generatedOutputDir.convention(generatedOutputDir)
+            task.repositories.convention(filteredRepositories)
+            task.dependencies.convention(project.configurations.getByName("paperRuntime").dependencies)
+            task.generatedOutputDir.convention(generatedOutputDir)
         }
 
         configurations.matching { it.name == "compileClasspath" }

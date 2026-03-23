@@ -27,27 +27,17 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Scanner
 import java.util.zip.ZipFile
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.OnErrorResult
-import kotlin.io.path.copyToRecursively
-import kotlin.io.path.name
-import kotlin.io.path.readText
-import kotlin.io.path.reader
-import kotlin.io.path.writer
+import kotlin.io.path.*
 
 @OptIn(ExperimentalPathApi::class)
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class PluginApplyTest {
     @field:TempDir(cleanup = CleanupMode.NEVER)
     lateinit var testProjectDir: Path
-    val logger: Logger = LoggerFactory.getLogger("Test")
 
     val baseGradleBuild: String =
         """
@@ -132,11 +122,66 @@ class PluginApplyTest {
 
     }
 
+    @Test
+    fun `generated source includes setting based repositories`() {
+        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
+            it.write(
+                """
+                plugins {
+                    id 'dev.hboyd.paper-loader-gen'
+                }
+                
+                dependencies {
+                    compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
+                    paperRuntime("org.jspecify:jspecify:1.0.0")
+                }
+                
+                tasks {
+                    generatePaperLoader {
+                        classPath = "dev.hboyd.testplugin.TestPluginLoader"
+                    }
+                }
+        
+            """.trimIndent())
+        }
+
+        PrintWriter(testProjectDir.resolve("settings.gradle").writer()).use {
+            it.write(
+                """
+                dependencyResolutionManagement {
+                    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+                    repositories {
+                        mavenCentral()
+                        maven {
+                            name = "papermc-repo"
+                            url = "https://repo.papermc.io/repository/maven-public/"
+                        }
+                        maven {
+                            name = "hboyd-dev-repo"
+                            url = "https://repo.hboyd.dev/snapshots/"
+                        }
+                    }
+                }
+            """.trimIndent())
+        }
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assert(Files.lines(testProjectDir.resolve("build/generated/PaperLoaderGen/main/dev/hboyd/testplugin/TestPluginLoader.java"))
+            .filter { it.contains("        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.0\"), null));") }
+            .count().toInt() == 1)
+
+    }
+
     private fun executeGradleRun(task: String): BuildResult =
         GradleRunner
             .create()
             .withProjectDir(testProjectDir.toFile())
             .withArguments(task)
             .withPluginClasspath()
+            .forwardOutput()
             .build()
 }
