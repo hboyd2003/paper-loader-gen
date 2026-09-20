@@ -6,10 +6,6 @@ plugins {
     alias(libs.plugins.pluginPublish)
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(gradleApi())
     testImplementation(platform(libs.junitBom))
@@ -61,9 +57,4 @@ gradlePlugin {
             }
         }
     }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
 }
