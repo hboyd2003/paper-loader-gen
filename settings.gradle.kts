@@ -1,3 +1,5 @@
+rootProject.name = "paper-loader-gen"
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
