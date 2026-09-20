@@ -21,6 +21,9 @@ package dev.hboyd.paperloadergen
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.internal.GradleInternal
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
@@ -34,6 +37,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 import kotlin.time.Clock
 import kotlin.time.toJavaInstant
 
@@ -41,7 +45,10 @@ import kotlin.time.toJavaInstant
  * Task that generates the Paper Loader class.
  */
 @CacheableTask
-abstract class PaperLoaderGenTask : DefaultTask() {
+abstract class PaperLoaderGenTask @Inject constructor(
+    layout: ProjectLayout,
+    objectFactory: ObjectFactory
+) : DefaultTask() {
     init {
         group = "generate"
     }
@@ -56,19 +63,34 @@ abstract class PaperLoaderGenTask : DefaultTask() {
      * Repositories included in the loader.
      */
     @get:Input
-    abstract val repositories: ListProperty<MavenArtifactRepository>
+    val repositories: ListProperty<MavenArtifactRepository> = objectFactory.listProperty(MavenArtifactRepository::class.java)
+        .convention(project.provider {
+            project.repositories
+                .plus((project.gradle as GradleInternal).settings.dependencyResolutionManagement.repositories) // Required due to https://github.com/gradle/gradle/issues/16616
+                .filterIsInstance<MavenArtifactRepository>()
+                .filter { repo ->
+                    repo.url.scheme.startsWith("http") // Only http/https repos
+                            && !repo.url.host.equals("repo.maven.apache.org")  // Ignore central repo which is against TOS to use
+                }
+            }
+        )
+
 
     /**
      * Dependencies included in the loader.
      */
     @get:Input
-    abstract val dependencies: ListProperty<Dependency>
+    val dependencies: ListProperty<Dependency> = objectFactory.listProperty(Dependency::class.java)
+        .convention(project.provider { project.configurations.getByName("paperRuntime").dependencies })
 
     /**
      * Source root of the loader.
      */
     @get:Input
-    abstract val generatedOutputDir: Property<Path>
+    val generatedOutputDir: Property<Path> = objectFactory.property(Path::class.java)
+        .convention(project.provider {
+            layout.buildDirectory.get().asFile.toPath().resolve("generated/PaperLoaderGen/main")
+        })
 
     /**
      * Additional dependency coordinates to add.

@@ -20,9 +20,6 @@ package dev.hboyd.paperloadergen
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.repositories.ArtifactRepository
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-import org.gradle.api.internal.GradleInternal
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
@@ -42,23 +39,7 @@ abstract class PaperLoaderGen : Plugin<Project> {
         val generatedOutputDir: Path = layout.buildDirectory.get().asFile.toPath()
             .resolve("generated/PaperLoaderGen/main")
 
-        val paperLoaderGenTask: TaskProvider<PaperLoaderGenTask> = tasks.register("generatePaperLoader", PaperLoaderGenTask::class.java) { task ->
-            val allRepositories: ArrayList<ArtifactRepository> = ArrayList()
-            allRepositories.addAll(repositories)
-
-            // Required do to https://github.com/gradle/gradle/issues/16616
-            allRepositories.addAll((project.gradle as GradleInternal).settings.dependencyResolutionManagement.repositories)
-
-            val filteredRepositories = allRepositories
-                .filterIsInstance<MavenArtifactRepository>()
-                .filter { repo -> repo.url.scheme.startsWith("http") // Only http/https repos
-                        && !repo.url.host.equals("repo.maven.apache.org") } // Remove central repo which is against TOS to use
-                .toList()
-
-            task.repositories.convention(filteredRepositories)
-            task.dependencies.convention(project.configurations.getByName("paperRuntime").dependencies)
-            task.generatedOutputDir.convention(generatedOutputDir)
-        }
+        val paperLoaderGenTask: TaskProvider<PaperLoaderGenTask> = tasks.register("generatePaperLoader", PaperLoaderGenTask::class.java)
 
         configurations.matching { it.name == "compileClasspath" }
             .configureEach {
