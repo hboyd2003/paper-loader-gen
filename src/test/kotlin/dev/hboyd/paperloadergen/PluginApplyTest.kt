@@ -86,7 +86,7 @@ class PluginApplyTest {
     fun `project compiles with generated source test`() {
         PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
             it.format(baseGradleBuild,
-                "paperRuntime(\"dev.hboyd:prismatic-lib:1.0-SNAPSHOT\")", "")
+                "paperRuntime(\"org.jspecify:jspecify:1.0.1\")", "")
         }
 
         val gradleResult = executeGradleRun("build")

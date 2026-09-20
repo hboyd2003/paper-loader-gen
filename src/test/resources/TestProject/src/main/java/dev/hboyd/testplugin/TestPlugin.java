@@ -1,7 +1,6 @@
 package dev.hboyd.testplugin;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import dev.hboyd.prismatic.ComponentUtil;
 
 public final class TestPlugin extends JavaPlugin {
     @Override
