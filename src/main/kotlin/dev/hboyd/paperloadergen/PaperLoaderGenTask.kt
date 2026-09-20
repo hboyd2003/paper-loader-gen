@@ -21,6 +21,7 @@ package dev.hboyd.paperloadergen
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.internal.GradleInternal
 import org.gradle.api.model.ObjectFactory
@@ -30,6 +31,7 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -86,11 +88,9 @@ abstract class PaperLoaderGenTask @Inject constructor(
     /**
      * Source root of the loader.
      */
-    @get:Input
-    val generatedOutputDir: Property<Path> = objectFactory.property(Path::class.java)
-        .convention(project.provider {
-            layout.buildDirectory.get().asFile.toPath().resolve("generated/PaperLoaderGen/main")
-        })
+    @get:OutputDirectory
+    val generatedSrcRoot: DirectoryProperty = objectFactory.directoryProperty()
+        .convention(layout.buildDirectory.dir("generated/PaperLoaderGen/main"))
 
     /**
      * Additional dependency coordinates to add.
@@ -101,8 +101,10 @@ abstract class PaperLoaderGenTask @Inject constructor(
 
     @TaskAction
     fun generate() {
-        val outputFile: Path = generatedOutputDir.get()
-            .resolve(classPath.get().replace('.', '/') + ".java")
+        val outputFile: Path = generatedSrcRoot.get()
+            .dir(classPath.get().replace('.', '/') + ".java")
+            .asFile
+            .toPath()
 
         Files.createDirectories(outputFile.parent)
 
