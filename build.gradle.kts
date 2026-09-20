@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.indra)
     alias(libs.plugins.indraPluginPublishing)
     alias(libs.plugins.indraLicenserSpotless)
+    alias(libs.plugins.gitSimpleSemver)
 }
 
 dependencies {
