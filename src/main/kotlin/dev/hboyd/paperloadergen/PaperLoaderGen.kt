@@ -28,6 +28,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
 import java.nio.file.Path
+import java.util.Properties
 
 abstract class PaperLoaderGen : Plugin<Project> {
 
@@ -50,8 +51,8 @@ abstract class PaperLoaderGen : Plugin<Project> {
 
             val filteredRepositories = allRepositories
                 .filterIsInstance<MavenArtifactRepository>()
-                .filter { repo -> !repo.url.toString().startsWith("file") }
-                .filter { repo -> !repo.url.toString().contains("repo.maven.apache.org/maven2/") } // Remove central repo which is against TOS to use
+                .filter { repo -> repo.url.scheme.startsWith("http") // Only http/https repos
+                        && !repo.url.host.equals("repo.maven.apache.org") } // Remove central repo which is against TOS to use
                 .toList()
 
             task.repositories.convention(filteredRepositories)
