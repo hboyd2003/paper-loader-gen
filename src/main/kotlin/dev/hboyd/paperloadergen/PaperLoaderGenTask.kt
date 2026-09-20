@@ -94,7 +94,7 @@ abstract class PaperLoaderGenTask : DefaultTask() {
                     import org.jspecify.annotations.NonNull;
                     import javax.annotation.processing.Generated;
                     
-                    @Generated(value = "dev.hboyd.paperloadergen.PaperLoaderGenerationTask", date = "%s")
+                    @Generated(value = "dev.hboyd.paperloadergen.PaperLoaderGenerationTask", date = "%s", comments = "Version: %s")
                     @SuppressWarnings({"UnstableApiUsage", "unused"})
                     public final class %s implements PluginLoader {
                         @Override
@@ -104,6 +104,7 @@ abstract class PaperLoaderGenTask : DefaultTask() {
                 """.trimIndent(),
                 classPath.get().substringBeforeLast('.'),
                 DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.of("UTC")).format(Clock.System.now().toJavaInstant()),
+                PaperLoaderGen.pluginVersion(),
                 classPath.get().substringAfterLast('.')
             )
 
@@ -132,4 +133,5 @@ abstract class PaperLoaderGenTask : DefaultTask() {
             )
         }
     }
+
 }

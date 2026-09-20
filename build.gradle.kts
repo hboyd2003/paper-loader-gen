@@ -66,4 +66,8 @@ tasks {
     test {
         useJUnitPlatform()
     }
+
+    processResources {
+        expand(mapOf("version" to version))
+    }
 }

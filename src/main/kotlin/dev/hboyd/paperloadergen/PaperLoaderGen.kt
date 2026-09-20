@@ -68,4 +68,16 @@ abstract class PaperLoaderGen : Plugin<Project> {
         mainSourceSet.java.srcDir(generatedOutputDir)
         project.tasks.named(mainSourceSet.compileJavaTaskName).configure { it.dependsOn(paperLoaderGenTask) }
     }
+
+    companion object {
+        fun pluginVersion(): String {
+            val properties = Properties();
+
+            {}.javaClass.getResourceAsStream("version.properties").use {
+                properties.load(it)
+            }
+
+            return properties.getProperty("version")
+        }
+    }
 }
