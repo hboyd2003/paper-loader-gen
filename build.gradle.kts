@@ -28,6 +28,8 @@ indra {
 
     gpl3OrLaterLicense()
 
+    signWithKeyFromPrefixedProperties("hboyd")
+
     configurePublications {
         pom {
             developers {
