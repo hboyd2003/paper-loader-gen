@@ -47,22 +47,31 @@ abstract class PaperLoaderGenTask : DefaultTask() {
     }
 
     /**
-     * The fully qualified path to the generated Paper Loader class.
+     * The fully qualified class path of the loader.
      */
     @get:Input
     abstract val classPath: Property<String>
 
+    /**
+     * Repositories included in the loader.
+     */
     @get:Input
     abstract val repositories: ListProperty<MavenArtifactRepository>
 
+    /**
+     * Dependencies included in the loader.
+     */
     @get:Input
     abstract val dependencies: ListProperty<Dependency>
 
+    /**
+     * Source root of the loader.
+     */
     @get:Input
     abstract val generatedOutputDir: Property<Path>
 
     /**
-     * The fully qualified path to the generated Paper Loader class.
+     * Additional dependency coordinates to add.
      */
     @get:Optional
     @get:Input
