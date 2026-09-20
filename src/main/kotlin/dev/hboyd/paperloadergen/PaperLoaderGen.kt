@@ -34,7 +34,7 @@ abstract class PaperLoaderGen : Plugin<Project> {
     override fun apply(project: Project): Unit = with(project) {
         pluginManager.apply(JavaPlugin::class.java)
 
-        val idk = configurations.dependencyScope("paperRuntime") {
+        val paperRuntimeDependencyScope = configurations.dependencyScope("paperRuntime") {
             it.extendsFrom( configurations.getByName("compileOnly"))
         }
 
@@ -61,7 +61,7 @@ abstract class PaperLoaderGen : Plugin<Project> {
 
         configurations.matching { it.name == "compileClasspath" }
             .configureEach {
-                it.extendsFrom(idk)
+                it.extendsFrom(paperRuntimeDependencyScope)
             }
 
         val mainSourceSet: SourceSet = project.extensions.getByType(JavaPluginExtension::class.java).sourceSets.getByName("main")
