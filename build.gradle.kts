@@ -14,7 +14,7 @@ dependencies {
 
 indra {
     javaVersions {
-        target(17)
+        target(21)
     }
 
     github("hboyd2003", "paper-loader-gen") {
