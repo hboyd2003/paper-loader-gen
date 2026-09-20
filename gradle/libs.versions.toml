@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.3.10"
-pluginPublish = "2.1.0"
+pluginPublish = "2.2.1"
 
 # Testing
 junit = "6.0.3"
