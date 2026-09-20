@@ -1,9 +1,8 @@
-import org.gradle.plugin.compatibility.compatibility
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.pluginPublish)
+    alias(libs.plugins.indra)
+    alias(libs.plugins.indraPluginPublishing)
 }
 
 dependencies {
@@ -13,48 +12,49 @@ dependencies {
     testRuntimeOnly(libs.junitPlatformLauncher)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+indra {
+    javaVersions {
+        target(17)
+    }
+
+    github("hboyd2003", "paper-loader-gen") {
+        ci(true)
+        publishing(false)
+    }
+
+    publishReleasesTo("gradlePluginPortal", "https://plugins.gradle.org/m2/")
+    publishReleasesTo("hboydDev", "https://repo.hboyd.dev/releases")
+    publishSnapshotsTo("hboydDev", "https://repo.hboyd.dev/snapshots")
+
+    gpl3OrLaterLicense()
+
+    configurePublications {
+        pom {
+            developers {
+                developer {
+                    id.set("hboyd2003")
+                    name.set("Harrison Boyd")
+                    email.set("8950185+hboyd2003@users.noreply.github.com")
+                    timezone = "America/New_York"
+                }
+            }
+        }
+    }
+}
+
+indraPluginPublishing {
+    plugin(
+        project.name,
+        "dev.hboyd.paperloadergen.PaperLoaderGen",
+        "Paper Loader Gen",
+        "Gradle plugin to automatically generate Minecraft Paper loader classes.",
+        listOf("minecraft", "paper", "codegen")
+    )
+    website("https://github.com/hboyd2003/paper-loader-gen")
 }
 
 tasks {
     test {
         useJUnitPlatform()
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
-
-publishing {
-    repositories {
-        mavenLocal()
-    }
-}
-
-val pluginId = (project.group as String) + "." + project.name
-
-gradlePlugin {
-    website = "https://github.com/hboyd2003/paper-loader-gen"
-    vcsUrl = "https://github.com/hboyd2003/paper-loader-gen"
-
-    plugins {
-        create(pluginId) {
-            id = pluginId
-            displayName = "Paper Loader Gen"
-            description = "Gradle plugin to automatically generate Minecraft Paper loader classes."
-            implementationClass = "dev.hboyd.paperloadergen.PaperLoaderGen"
-            tags.set(listOf("minecraft", "paper", "codegen"))
-            compatibility {
-                features {
-                    configurationCache = true
-                }
-            }
-        }
     }
 }
