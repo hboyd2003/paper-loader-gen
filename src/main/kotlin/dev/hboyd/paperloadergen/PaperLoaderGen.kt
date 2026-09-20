@@ -24,7 +24,6 @@ import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
-import java.nio.file.Path
 import java.util.Properties
 
 abstract class PaperLoaderGen : Plugin<Project> {
@@ -36,9 +35,6 @@ abstract class PaperLoaderGen : Plugin<Project> {
             it.extendsFrom( configurations.getByName("compileOnly"))
         }
 
-        val generatedOutputDir: Path = layout.buildDirectory.get().asFile.toPath()
-            .resolve("generated/PaperLoaderGen/main")
-
         val paperLoaderGenTask: TaskProvider<PaperLoaderGenTask> = tasks.register("generatePaperLoader", PaperLoaderGenTask::class.java)
 
         configurations.matching { it.name == "compileClasspath" }
@@ -47,7 +43,7 @@ abstract class PaperLoaderGen : Plugin<Project> {
             }
 
         val mainSourceSet: SourceSet = project.extensions.getByType(JavaPluginExtension::class.java).sourceSets.getByName("main")
-        mainSourceSet.java.srcDir(generatedOutputDir)
+        mainSourceSet.java.srcDir(paperLoaderGenTask)
         project.tasks.named(mainSourceSet.compileJavaTaskName).configure { it.dependsOn(paperLoaderGenTask) }
     }
 
