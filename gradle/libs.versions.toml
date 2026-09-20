@@ -11,6 +11,7 @@ kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
 pluginPublish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish"}
 indra = { id = "net.kyori.indra", version.ref = "indra" }
 indraPluginPublishing = { id = "net.kyori.indra.publishing.gradle-plugin", version.ref = "indra" }
+indraLicenserSpotless = { id = "net.kyori.indra.licenser.spotless", version.ref = "indra" }
 
 [libraries]
 # Testing

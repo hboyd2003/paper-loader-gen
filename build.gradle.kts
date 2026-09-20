@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.pluginPublish)
     alias(libs.plugins.indra)
     alias(libs.plugins.indraPluginPublishing)
+    alias(libs.plugins.indraLicenserSpotless)
 }
 
 dependencies {
@@ -42,6 +43,11 @@ indra {
             }
         }
     }
+}
+
+indraSpotlessLicenser {
+    licenseHeaderFile(rootProject.file(".spotless/license_header_template.txt"))
+    newLine(true)
 }
 
 indraPluginPublishing {

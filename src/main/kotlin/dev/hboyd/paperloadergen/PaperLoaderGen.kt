@@ -1,6 +1,6 @@
 /*
  * paper-loader-gen
- * Copyright (C) 2026 Harrison Boyd
+ * Copyright (c) 2026 Harrison Boyd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
