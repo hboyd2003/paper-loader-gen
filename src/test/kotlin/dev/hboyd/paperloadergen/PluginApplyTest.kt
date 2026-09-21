@@ -100,6 +100,40 @@ class PluginApplyTest {
     }
 
     @Test
+    fun `generated source includes maven central mirror repo`() {
+        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
+            it.write(
+                """
+                plugins {
+                    id 'dev.hboyd.paper-loader-gen'
+                }
+                
+                dependencies {
+                    compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
+                }
+                
+                tasks {
+                    generatePaperLoader {
+                        classPath = "dev.hboyd.testplugin.TestPluginLoader"
+                    }
+                }
+        
+            """.trimIndent())
+        }
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsLines(
+            setOf(
+                "        resolver.addRepository(new RemoteRepository.Builder(\"maven-central\", \"default\", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());"
+            )
+        )
+    }
+
+    @Test
     fun `generated source includes additional dependencies`() {
         PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
             it.format(baseGradleBuild,
