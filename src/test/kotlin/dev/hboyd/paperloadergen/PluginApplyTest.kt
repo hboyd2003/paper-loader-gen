@@ -116,10 +116,7 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assert(Files.lines(testProjectDir.resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
-            .filter { it.contains("        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));") }
-            .count().toInt() == 1)
-
+        assertGeneratedSourceContainsLines(setOf("        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));"))
     }
 
     @Test
@@ -170,10 +167,22 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assert(Files.lines(testProjectDir.resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
-            .filter { it.contains("        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.0\"), null));") }
-            .count().toInt() == 1)
+        assertGeneratedSourceContainsLines(
+            setOf(
+                "        resolver.addRepository(new RemoteRepository.Builder(\"papermc-repo\", \"default\", \"https://repo.papermc.io/repository/maven-public/\").build());",
+                "        resolver.addRepository(new RemoteRepository.Builder(\"hboyd-dev-repo\", \"default\", \"https://repo.hboyd.dev/snapshots/\").build());"
+            )
+        )
+    }
 
+    private fun assertGeneratedSourceContainsLines(lines: Set<String>) {
+        val unseenLines = lines.toMutableList()
+        unseenLines.removeAll(Files.lines(testProjectDir
+            .resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java")).toList())
+
+        assert(unseenLines.isEmpty()) {
+            "Generated source did not include expected lines: ${unseenLines.joinToString("\", ", "[\"", "\"]")}"
+        }
     }
 
     private fun executeGradleRun(task: String): BuildResult =
