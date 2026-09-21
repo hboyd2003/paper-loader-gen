@@ -90,7 +90,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
      */
     @get:OutputDirectory
     val generatedSrcRoot: DirectoryProperty = objectFactory.directoryProperty()
-        .convention(layout.buildDirectory.dir("generated/PaperLoaderGen/main"))
+        .convention(layout.buildDirectory.dir("generated/sources/${this.name}/java/main"))
 
     /**
      * Additional dependency coordinates to add.

@@ -116,7 +116,7 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assert(Files.lines(testProjectDir.resolve("build/generated/PaperLoaderGen/main/dev/hboyd/testplugin/TestPluginLoader.java"))
+        assert(Files.lines(testProjectDir.resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
             .filter { it.contains("        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));") }
             .count().toInt() == 1)
 
@@ -170,7 +170,7 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assert(Files.lines(testProjectDir.resolve("build/generated/PaperLoaderGen/main/dev/hboyd/testplugin/TestPluginLoader.java"))
+        assert(Files.lines(testProjectDir.resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
             .filter { it.contains("        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.0\"), null));") }
             .count().toInt() == 1)
 
@@ -182,6 +182,7 @@ class PluginApplyTest {
             .withProjectDir(testProjectDir.toFile())
             .withArguments(task)
             .withPluginClasspath()
+            .withDebug(true)
             .forwardOutput()
             .build()
 }
