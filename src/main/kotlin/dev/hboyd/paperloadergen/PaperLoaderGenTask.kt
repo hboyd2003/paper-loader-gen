@@ -232,10 +232,12 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
                     import org.eclipse.aether.artifact.DefaultArtifact;
                     import org.eclipse.aether.graph.Dependency;
+                    import org.eclipse.aether.graph.Exclusion;
                     import org.eclipse.aether.repository.RemoteRepository;
                     import org.eclipse.aether.repository.LocalRepository;
                     import org.jspecify.annotations.NonNull;
                     import javax.annotation.processing.Generated;
+                    import java.util.List;
                     
                     @Generated(value = "dev.hboyd.paperloadergen.PaperLoaderGenerationTask", date = "%s", comments = "Version: %s")
                     @SuppressWarnings({"UnstableApiUsage", "unused"})
@@ -266,6 +268,10 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     }
                 }
                 writer.write("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, ${exclusionsString}));")
+            }
+
+            additionalDependencies.get().forEach {
+                writer.format("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it}\"), null));")
             }
 
             writer.write(

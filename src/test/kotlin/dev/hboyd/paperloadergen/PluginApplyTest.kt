@@ -148,13 +148,34 @@ class PluginApplyTest {
 
         assertGeneratedSourceContainsLines(
             setOf(
-                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));",
-                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.1\"), null));"
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null, null, null));",
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.1\"), null, null, null));"
             )
         )
         assertGeneratedSourceDoesNotContainLines(
             setOf(
-                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT\"), null));"
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT\"), null, null, null));"
+            )
+        )
+    }
+
+    @Test
+    fun `generated source includes dependency exclusions`() {
+        writeGradleBuildFile(dependencies = """
+            paperRuntime("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT") {
+                exclude group: 'net.kyori', module: 'adventure-api'
+                exclude group: 'net.kyori', module: 'adventure-nbt' 
+            }
+            """.trimIndent())
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsLines(
+            setOf(
+                """        resolver.addDependency(new Dependency(new DefaultArtifact("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"), null, null, List.of(new Exclusion("net.kyori", "adventure-nbt", "*", "*"), new Exclusion("net.kyori", "adventure-api", "*", "*"))));""",
             )
         )
     }
