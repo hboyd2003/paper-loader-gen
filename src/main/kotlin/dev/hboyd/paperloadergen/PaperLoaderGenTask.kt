@@ -20,11 +20,14 @@ package dev.hboyd.paperloadergen
 
 import dev.hboyd.paperloadergen.artifact.SerializableDependency
 import dev.hboyd.paperloadergen.artifact.SerializableExcludeRule
+import dev.hboyd.paperloadergen.artifact.SerializableMavenArtifactRepository
+import dev.hboyd.paperloadergen.artifact.SerializablePasswordCredentials
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExcludeRule
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.credentials.PasswordCredentials
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.internal.GradleInternal
@@ -37,6 +40,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.artifacts.repositories.AuthenticationSupportedInternal
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.nio.file.Files
@@ -69,18 +73,17 @@ abstract class PaperLoaderGenTask @Inject constructor(
      * Repositories included in the loader.
      */
     @get:Input
-    val repositories: ListProperty<MavenArtifactRepository> = objectFactory.listProperty(MavenArtifactRepository::class.java)
-        .convention(project.provider {
-            project.repositories
-                .plus((project.gradle as GradleInternal).settings.dependencyResolutionManagement.repositories) // Required due to https://github.com/gradle/gradle/issues/16616
-                .filterIsInstance<MavenArtifactRepository>()
-                .filter { repo ->
-                    repo.url.scheme.startsWith("http") // Only http/https repos
-                            && !repo.url.host.equals("repo.maven.apache.org")  // Ignore central repo which is against TOS to use
-                }
-            }
-        )
-
+    val repositories: ListProperty<SerializableMavenArtifactRepository> =
+        objectFactory.listProperty(SerializableMavenArtifactRepository::class.java)
+            .convention(project.provider {
+                project.repositories
+                    .plus((project.gradle as GradleInternal).settings.dependencyResolutionManagement.repositories) // Required due to https://github.com/gradle/gradle/issues/16616
+                    .filterIsInstance<MavenArtifactRepository>()
+                    .filter { repo ->
+                        repo.url.scheme.startsWith("http") // Only http/https repos
+                                && !repo.url.host.equals("repo.maven.apache.org")  // Ignore central repo which is against TOS to use
+                    }.map { it.toSerializable() }
+            })
 
     /**
      * Dependencies included in the loader.
@@ -149,7 +152,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
             )
 
             repositories.get().forEach {
-                writer.format("\n        resolver.addRepository(new RemoteRepository.Builder(\"${it.name}\", \"default\", \"${it.url}\").build());")
+                writer.write("\n        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\").build());")
             }
 
             writer.write("\n")
@@ -175,6 +178,33 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 """.trimIndent()
             )
         }
+    }
+
+    fun MavenArtifactRepository.toSerializable(): SerializableMavenArtifactRepository {
+        val serializableMavenArtifactRepository = objectFactory.newInstance(SerializableMavenArtifactRepository::class.java)
+
+        serializableMavenArtifactRepository.name.set(name)
+        serializableMavenArtifactRepository.uri.set(url)
+        if (this is AuthenticationSupportedInternal) { // Calling the normal getCredentials modifies the repo with blank credentials if it doesn't already have any
+            val credentialsProvider = configuredCredentials.map { credentials ->
+                if (credentials is PasswordCredentials) return@map credentials.toSerializable()
+
+                logger.warn("Repository $name is configured with a type of credential that is unsupported.")
+                return@map null
+            }
+            serializableMavenArtifactRepository.credentials.set(credentialsProvider)
+        }
+
+        return serializableMavenArtifactRepository
+    }
+
+    fun PasswordCredentials.toSerializable(): SerializablePasswordCredentials {
+        val serializablePasswordCredentials = objectFactory.newInstance(SerializablePasswordCredentials::class.java)
+
+        serializablePasswordCredentials.username.set(username)
+        serializablePasswordCredentials.password.set(password)
+
+        return serializablePasswordCredentials
     }
 
     fun Dependency.toSerializable(): SerializableDependency {
