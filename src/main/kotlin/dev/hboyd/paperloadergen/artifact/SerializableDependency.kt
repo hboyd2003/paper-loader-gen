@@ -25,7 +25,7 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import javax.inject.Inject
 
-abstract class SerializableDependency @Inject constructor(
+internal abstract class SerializableDependency @Inject constructor(
     val providerFactory: ProviderFactory
 ) {
     @get:Input

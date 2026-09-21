@@ -18,16 +18,14 @@
 
 package dev.hboyd.paperloadergen.artifact
 
-import org.gradle.api.credentials.Credentials
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.internal.impldep.kotlinx.serialization.Serializable
 import java.net.URI
 
 /**
  * A Maven repository.
  */
-abstract class SerializableMavenArtifactRepository {
+internal abstract class SerializableMavenArtifactRepository {
     @get:Input
     abstract val name: Property<String>
 

@@ -21,7 +21,7 @@ package dev.hboyd.paperloadergen.artifact
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 
-abstract class SerializablePasswordCredentials {
+internal abstract class SerializablePasswordCredentials {
     @get:Input
     abstract val username: Property<String>
 

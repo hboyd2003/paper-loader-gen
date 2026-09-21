@@ -34,6 +34,7 @@ import org.gradle.api.internal.GradleInternal
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
@@ -73,7 +74,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
      * Repositories included in the loader.
      */
     @get:Input
-    val repositories: ListProperty<SerializableMavenArtifactRepository> =
+    private val repositories: ListProperty<SerializableMavenArtifactRepository> =
         objectFactory.listProperty(SerializableMavenArtifactRepository::class.java)
             .convention(project.provider {
                 project.repositories
@@ -89,11 +90,12 @@ abstract class PaperLoaderGenTask @Inject constructor(
      * Dependencies included in the loader.
      */
     @get:Input
-    val dependencies: ListProperty<SerializableDependency> = objectFactory.listProperty(SerializableDependency::class.java)
-        .convention(project.provider {
-            project.configurations.getByName("paperRuntime").dependencies
-                .map { it.toSerializable() }
-        })
+    private val dependencies: ListProperty<SerializableDependency> =
+        objectFactory.listProperty(SerializableDependency::class.java)
+            .convention(project.provider {
+                project.configurations.getByName("paperRuntime").dependencies
+                    .map { it.toSerializable() }
+            })
 
     /**
      * Source root of the loader.
@@ -108,6 +110,104 @@ abstract class PaperLoaderGenTask @Inject constructor(
     @get:Optional
     @get:Input
     abstract val additionalDependencies: SetProperty<String>
+
+    /**
+     * Set the repositories in the loader with [repositories].
+     */
+    fun setRepositories(repositories: Iterable<MavenArtifactRepository>) {
+        this.repositories.set(repositories.map { it.toSerializable() })
+    }
+
+    /**
+     * Set the repositories in the loader with [repositories].
+     */
+    fun setRepositories(repositories: Provider<out Iterable<MavenArtifactRepository>>) {
+        this.repositories.set(repositories.map { repos -> repos.map { it.toSerializable() } })
+    }
+
+    /**
+     * Add the [repository] to the loader.
+     */
+    fun addRepository(repository: MavenArtifactRepository) {
+        this.repositories.add(repository.toSerializable())
+    }
+
+    /**
+     * Add the repository provided by [repositoryProvider] to the loader.
+     */
+    fun addRepository(repositoryProvider: Provider<out MavenArtifactRepository>) {
+        this.repositories.add(repositoryProvider.map { it.toSerializable() })
+    }
+
+    /**
+     * Add the [repositories] to the loader.
+     */
+    fun addRepositories(vararg repositories: MavenArtifactRepository) {
+        addRepositories(repositories.asIterable())
+    }
+
+    /**
+     * Add the [repositories] to the loader.
+     */
+    fun addRepositories(repositories: Iterable<MavenArtifactRepository>) {
+        this.repositories.addAll(repositories.map { it.toSerializable() })
+    }
+
+    /**
+     * Add the repositories provided by [repositoryProviders] to the loader.
+     */
+    fun addRepositories(repositoryProviders: Provider<out Iterable<MavenArtifactRepository>>) {
+        this.repositories.addAll(repositoryProviders.map { repos -> repos.map { it.toSerializable() } })
+    }
+
+    /**
+     * Set the dependencies in the loader with [dependencies].
+     */
+    fun setDependencies(dependencies: Iterable<Dependency>) {
+        this.dependencies.set(dependencies.map { it.toSerializable() })
+    }
+
+    /**
+     * Set the dependencies in the loader with [dependencies].
+     */
+    fun setDependencies(dependencies: Provider<out Iterable<Dependency>>) {
+        this.dependencies.set(dependencies.map { dependencies -> dependencies.map { it.toSerializable() } })
+    }
+
+    /**
+     * Add the [dependency] to the loader.
+     */
+    fun addDependency(dependency: Dependency) {
+        this.dependencies.add(dependency.toSerializable())
+    }
+
+    /**
+     * Add the dependency provided by [dependencyProvider] to the loader.
+     */
+    fun addDependency(dependencyProvider: Provider<out Dependency>) {
+        this.dependencies.add(dependencyProvider.map { it.toSerializable() })
+    }
+
+    /**
+     * Add the [dependencies] to the loader.
+     */
+    fun addDependencies(vararg dependencies: Dependency) {
+        addDependencies(dependencies.asIterable())
+    }
+
+    /**
+     * Add the [dependencies] to the loader.
+     */
+    fun addDependencies(dependencies: Iterable<Dependency>) {
+        this.dependencies.addAll(dependencies.map { it.toSerializable() })
+    }
+
+    /**
+     * Add the dependencies provided by [dependencyProviders] to the loader.
+     */
+    fun addDependencies(dependencyProviders: Provider<out Iterable<Dependency>>) {
+        this.dependencies.addAll(dependencyProviders.map { dependencies -> dependencies.map { it.toSerializable() } })
+    }
 
     @TaskAction
     fun generate() {
@@ -180,7 +280,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
         }
     }
 
-    fun MavenArtifactRepository.toSerializable(): SerializableMavenArtifactRepository {
+    private fun MavenArtifactRepository.toSerializable(): SerializableMavenArtifactRepository {
         val serializableMavenArtifactRepository = objectFactory.newInstance(SerializableMavenArtifactRepository::class.java)
 
         serializableMavenArtifactRepository.name.set(name)
@@ -198,7 +298,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
         return serializableMavenArtifactRepository
     }
 
-    fun PasswordCredentials.toSerializable(): SerializablePasswordCredentials {
+    private fun PasswordCredentials.toSerializable(): SerializablePasswordCredentials {
         val serializablePasswordCredentials = objectFactory.newInstance(SerializablePasswordCredentials::class.java)
 
         serializablePasswordCredentials.username.set(username)
@@ -207,7 +307,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
         return serializablePasswordCredentials
     }
 
-    fun Dependency.toSerializable(): SerializableDependency {
+    private fun Dependency.toSerializable(): SerializableDependency {
         val serializableDependency = objectFactory.newInstance(SerializableDependency::class.java)
 
         serializableDependency.name.set(this.name)
@@ -220,7 +320,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
         return serializableDependency
     }
 
-    fun ExcludeRule.toSerializable(): SerializableExcludeRule {
+    private fun ExcludeRule.toSerializable(): SerializableExcludeRule {
         val serializableExcludeRule = objectFactory.newInstance(SerializableExcludeRule::class.java)
 
         serializableExcludeRule.group.set(this.group)

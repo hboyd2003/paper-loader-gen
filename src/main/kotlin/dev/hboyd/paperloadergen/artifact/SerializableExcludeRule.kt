@@ -21,7 +21,7 @@ package dev.hboyd.paperloadergen.artifact
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 
-abstract class SerializableExcludeRule {
+internal abstract class SerializableExcludeRule {
     @get:Input
     abstract val group: Property<String>
 
