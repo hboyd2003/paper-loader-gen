@@ -134,6 +134,31 @@ class PluginApplyTest {
         )
     }
 
+    @Test
+    fun `generated source includes paper runtime dependencies only`() {
+        writeGradleBuildFile(additionalDependencies = """
+            paperRuntime("net.kyori:adventure-api:4.26.1")
+            paperRuntime("org.jspecify:jspecify:1.0.1")
+            """.trimIndent())
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsLines(
+            setOf(
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));",
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.1\"), null));"
+            )
+        )
+        assertGeneratedSourceDoesNotContainLines(
+            setOf(
+                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT\"), null));"
+            )
+        )
+    }
+
     private fun writeGradleBuildFile(
         repositories: String = """
             maven {
@@ -195,6 +220,17 @@ class PluginApplyTest {
             "Generated source did not include expected lines: ${unseenLines.joinToString("\", ", "[\"", "\"]")}"
         }
     }
+
+    private fun assertGeneratedSourceDoesNotContainLines(lines: Set<String>) {
+        val seenLines = ArrayList<String>()
+        Files.lines(testProjectDir.resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
+            .forEach { if (lines.contains(it)) seenLines.add(it) }
+
+        assert(seenLines.isEmpty()) {
+            "Generated source include un-expected lines: ${seenLines.joinToString("\", ", "[\"", "\"]")}"
+        }
+    }
+
 
     private fun executeGradleRun(task: String): BuildResult =
         GradleRunner
