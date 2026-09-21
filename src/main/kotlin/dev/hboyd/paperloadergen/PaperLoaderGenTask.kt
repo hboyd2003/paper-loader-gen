@@ -18,8 +18,12 @@
 
 package dev.hboyd.paperloadergen
 
+import dev.hboyd.paperloadergen.artifact.SerializableDependency
+import dev.hboyd.paperloadergen.artifact.SerializableExcludeRule
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
@@ -49,7 +53,7 @@ import kotlin.time.toJavaInstant
 @CacheableTask
 abstract class PaperLoaderGenTask @Inject constructor(
     layout: ProjectLayout,
-    objectFactory: ObjectFactory
+    private val objectFactory: ObjectFactory
 ) : DefaultTask() {
     init {
         group = "generate"
@@ -82,8 +86,11 @@ abstract class PaperLoaderGenTask @Inject constructor(
      * Dependencies included in the loader.
      */
     @get:Input
-    val dependencies: ListProperty<Dependency> = objectFactory.listProperty(Dependency::class.java)
-        .convention(project.provider { project.configurations.getByName("paperRuntime").dependencies })
+    val dependencies: ListProperty<SerializableDependency> = objectFactory.listProperty(SerializableDependency::class.java)
+        .convention(project.provider {
+            project.configurations.getByName("paperRuntime").dependencies
+                .map { it.toSerializable() }
+        })
 
     /**
      * Source root of the loader.
@@ -148,11 +155,14 @@ abstract class PaperLoaderGenTask @Inject constructor(
             writer.write("\n")
 
             dependencies.get().forEach {
-                writer.format("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.group}:${it.name}:${it.version}\"), null));")
-            }
-
-            additionalDependencies.get().forEach {
-                writer.format("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it}\"), null));")
+                var exclusionsString = "null"
+                val excludeRules = it.excludeRules.get()
+                if (excludeRules.isNotEmpty()) {
+                    exclusionsString = excludeRules.joinToString(", ", "List.of(", ")") { excludeRule ->
+                        """new Exclusion("${excludeRule.group.getOrElse("*")}", "${excludeRule.module.getOrElse("*")}", "*", "*")"""
+                    }
+                }
+                writer.write("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, ${exclusionsString}));")
             }
 
             writer.write(
@@ -167,4 +177,25 @@ abstract class PaperLoaderGenTask @Inject constructor(
         }
     }
 
+    fun Dependency.toSerializable(): SerializableDependency {
+        val serializableDependency = objectFactory.newInstance(SerializableDependency::class.java)
+
+        serializableDependency.name.set(this.name)
+        serializableDependency.group.set(this.group)
+        serializableDependency.version.set(this.version)
+
+        if (this is ModuleDependency)
+            serializableDependency.excludeRules.set(this.excludeRules.map { it.toSerializable() })
+
+        return serializableDependency
+    }
+
+    fun ExcludeRule.toSerializable(): SerializableExcludeRule {
+        val serializableExcludeRule = objectFactory.newInstance(SerializableExcludeRule::class.java)
+
+        serializableExcludeRule.group.set(this.group)
+        serializableExcludeRule.module.set(this.module)
+
+        return serializableExcludeRule
+    }
 }
