@@ -39,37 +39,6 @@ class PluginApplyTest {
     @field:TempDir(cleanup = CleanupMode.NEVER)
     lateinit var testProjectDir: Path
 
-    val baseGradleBuild: String =
-        """
-        plugins {
-            id 'dev.hboyd.paper-loader-gen'
-        }
-        
-        repositories {
-            maven {
-                name = "papermc-repo"
-                url = "https://repo.papermc.io/repository/maven-public/"
-            }
-            maven {
-                name = "hboyd-dev-repo"
-                url = "https://repo.hboyd.dev/snapshots/"
-            }
-        }
-        
-        dependencies {
-            compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
-            %s
-        }
-        
-        tasks {
-            generatePaperLoader {
-                classPath = "dev.hboyd.testplugin.TestPluginLoader"
-                %s
-            }
-        }
-
-    """.trimIndent()
-
     @BeforeEach
     fun copyProjectToTempDir() {
         Path.of("src/test/resources/TestProject").copyToRecursively(
@@ -84,10 +53,7 @@ class PluginApplyTest {
 
     @Test
     fun `project compiles with generated source test`() {
-        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
-            it.format(baseGradleBuild,
-                "paperRuntime(\"org.jspecify:jspecify:1.0.1\")", "")
-        }
+        writeGradleBuildFile(additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")")
 
         val gradleResult = executeGradleRun("build")
         gradleResult.tasks.forEach {
@@ -101,25 +67,7 @@ class PluginApplyTest {
 
     @Test
     fun `generated source includes maven central mirror repo`() {
-        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
-            it.write(
-                """
-                plugins {
-                    id 'dev.hboyd.paper-loader-gen'
-                }
-                
-                dependencies {
-                    compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
-                }
-                
-                tasks {
-                    generatePaperLoader {
-                        classPath = "dev.hboyd.testplugin.TestPluginLoader"
-                    }
-                }
-        
-            """.trimIndent())
-        }
+        writeGradleBuildFile(repositories = "")
 
         val gradleResult = executeGradleRun("generatePaperLoader")
         gradleResult.tasks.forEach {
@@ -135,15 +83,11 @@ class PluginApplyTest {
 
     @Test
     fun `generated source includes additional dependencies`() {
-        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
-            it.format(baseGradleBuild,
-                    """
-                    paperRuntime("org.jspecify:jspecify:1.0.0")
-                """.trimIndent(),
-                    """
-                    additionalDependencies.add("net.kyori:adventure-api:4.26.1")
-                """.trimIndent())
-        }
+        writeGradleBuildFile(
+            repositories = "",
+            additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.0\")",
+            additionalGeneratePaperLoaderTaskConfig = "additionalDependencies.add(\"net.kyori:adventure-api:4.26.1\")"
+        )
 
         val gradleResult = executeGradleRun("generatePaperLoader")
         gradleResult.tasks.forEach {
@@ -155,26 +99,7 @@ class PluginApplyTest {
 
     @Test
     fun `generated source includes setting based repositories`() {
-        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
-            it.write(
-                """
-                plugins {
-                    id 'dev.hboyd.paper-loader-gen'
-                }
-                
-                dependencies {
-                    compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
-                    paperRuntime("org.jspecify:jspecify:1.0.0")
-                }
-                
-                tasks {
-                    generatePaperLoader {
-                        classPath = "dev.hboyd.testplugin.TestPluginLoader"
-                    }
-                }
-        
-            """.trimIndent())
-        }
+        writeGradleBuildFile(repositories = "")
 
         PrintWriter(testProjectDir.resolve("settings.gradle").writer()).use {
             it.write(
@@ -207,6 +132,58 @@ class PluginApplyTest {
                 "        resolver.addRepository(new RemoteRepository.Builder(\"hboyd-dev-repo\", \"default\", \"https://repo.hboyd.dev/snapshots/\").build());"
             )
         )
+    }
+
+    private fun writeGradleBuildFile(
+        repositories: String = """
+            maven {
+                name = "papermc-repo"
+                url = "https://repo.papermc.io/repository/maven-public/"
+            }
+            maven {
+                name = "hboyd-dev-repo"
+                url = "https://repo.hboyd.dev/snapshots/"
+            }
+            """.trimIndent(),
+        additionalRepositories: String? = null,
+        dependencies: String = "compileOnly \"io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT\"",
+        additionalDependencies: String? = null,
+        generatePaperLoaderTaskConfig: String = "classPath = \"dev.hboyd.testplugin.TestPluginLoader\"",
+        additionalGeneratePaperLoaderTaskConfig: String? = null
+    ) {
+        PrintWriter(testProjectDir.resolve("build.gradle").writer()).use {
+            it.format(
+                """
+                plugins {
+                    id 'dev.hboyd.paper-loader-gen'
+                }
+                
+                repositories {
+                    %s
+                    %s
+                }
+                
+                dependencies {
+                    %s
+                    %s
+                }
+                
+                tasks {
+                    generatePaperLoader {
+                        %s
+                        %s
+                    }
+                }
+        
+                """.trimIndent(),
+                repositories,
+                additionalRepositories,
+                dependencies,
+                additionalDependencies,
+                generatePaperLoaderTaskConfig,
+                additionalGeneratePaperLoaderTaskConfig
+            )
+        }
     }
 
     private fun assertGeneratedSourceContainsLines(lines: Set<String>) {
