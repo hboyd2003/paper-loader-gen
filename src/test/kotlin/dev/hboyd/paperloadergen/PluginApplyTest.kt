@@ -36,7 +36,7 @@ import kotlin.io.path.*
 @OptIn(ExperimentalPathApi::class)
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class PluginApplyTest {
-    @field:TempDir(cleanup = CleanupMode.NEVER)
+    @field:TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var testProjectDir: Path
 
     @BeforeEach
