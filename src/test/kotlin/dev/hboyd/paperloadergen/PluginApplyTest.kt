@@ -166,6 +166,7 @@ class PluginApplyTest {
 
     private fun writeGradleBuildFile(
         repositories: String = """
+            mavenCentral()
             maven {
                 name = "papermc-repo"
                 url = "https://repo.papermc.io/repository/maven-public/"
