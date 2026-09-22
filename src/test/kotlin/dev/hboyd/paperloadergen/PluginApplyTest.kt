@@ -82,22 +82,6 @@ class PluginApplyTest {
     }
 
     @Test
-    fun `generated source includes additional dependencies`() {
-        writeGradleBuildFile(
-            repositories = "",
-            additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.0\")",
-            additionalGeneratePaperLoaderTaskConfig = "additionalDependencies.add(\"net.kyori:adventure-api:4.26.1\")"
-        )
-
-        val gradleResult = executeGradleRun("generatePaperLoader")
-        gradleResult.tasks.forEach {
-            assert(it.outcome != TaskOutcome.FAILED)
-        }
-
-        assertGeneratedSourceContainsLines(setOf("        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null));"))
-    }
-
-    @Test
     fun `generated source includes setting based repositories`() {
         writeGradleBuildFile(repositories = "")
 

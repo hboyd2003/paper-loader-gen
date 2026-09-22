@@ -105,13 +105,6 @@ abstract class PaperLoaderGenTask @Inject constructor(
         .convention(layout.buildDirectory.dir("generated/sources/${this.name}/java/main"))
 
     /**
-     * Additional dependency coordinates to add.
-     */
-    @get:Optional
-    @get:Input
-    abstract val additionalDependencies: SetProperty<String>
-
-    /**
      * Set the repositories in the loader with [repositories].
      */
     fun setRepositories(repositories: Iterable<MavenArtifactRepository>) {
@@ -268,10 +261,6 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     }
                 }
                 writer.write("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, ${exclusionsString}));")
-            }
-
-            additionalDependencies.get().forEach {
-                writer.format("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it}\"), null));")
             }
 
             writer.write(
