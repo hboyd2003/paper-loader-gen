@@ -234,7 +234,6 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 import org.eclipse.aether.repository.RemoteRepository;
                 import org.eclipse.aether.repository.LocalRepository;
                 import org.eclipse.aether.util.repository.AuthenticationBuilder;
-                import org.jspecify.annotations.NonNull;
                 import javax.annotation.processing.Generated;
                 import java.util.List;
                 
@@ -242,7 +241,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 @SuppressWarnings({"UnstableApiUsage", "unused"})
                 public final class ${classPath.get().substringAfterLast('.')} implements PluginLoader {
                     @Override
-                    public void classloader(@NonNull PluginClasspathBuilder classpathBuilder) {
+                    public void classloader(PluginClasspathBuilder classpathBuilder) {
                         MavenLibraryResolver resolver = new MavenLibraryResolver();
                         resolver.addRepository(new RemoteRepository.Builder("maven-central", "default", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());
                 """.trimIndent(),
