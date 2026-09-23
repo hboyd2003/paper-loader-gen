@@ -21,7 +21,6 @@ package dev.hboyd.paperloadergen
 import dev.hboyd.paperloadergen.artifact.SerializableDependency
 import dev.hboyd.paperloadergen.artifact.SerializableExcludeRule
 import dev.hboyd.paperloadergen.artifact.SerializableMavenArtifactRepository
-import dev.hboyd.paperloadergen.artifact.SerializablePasswordCredentials
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExcludeRule
@@ -250,7 +249,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
             repositories.get().forEach {
                 writer.write("\n        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\")")
 
-                if (it.credentials.isPresent) {
+                if (it.hasPasswordCredentials.getOrElse(false)) {
                     val nameScreamingSnakeCase = it.name.get().toScreamingSnakeCase() + "_"
 
                     writer.write(
@@ -299,25 +298,16 @@ abstract class PaperLoaderGenTask @Inject constructor(
         serializableMavenArtifactRepository.name.set(name)
         serializableMavenArtifactRepository.uri.set(url)
         if (this is AuthenticationSupportedInternal) { // Calling the normal getCredentials modifies the repo with blank credentials if it doesn't already have any
-            val credentialsProvider = configuredCredentials.map { credentials ->
-                if (credentials is PasswordCredentials) return@map credentials.toSerializable()
+            val hasPasswordCredentialsProvider = configuredCredentials.map { credentials ->
+                if (credentials is PasswordCredentials) return@map true
 
                 logger.warn("Repository $name is configured with a type of credential that is unsupported.")
-                return@map null
+                return@map false
             }
-            serializableMavenArtifactRepository.credentials.set(credentialsProvider)
+            serializableMavenArtifactRepository.hasPasswordCredentials.set(hasPasswordCredentialsProvider)
         }
 
         return serializableMavenArtifactRepository
-    }
-
-    private fun PasswordCredentials.toSerializable(): SerializablePasswordCredentials {
-        val serializablePasswordCredentials = objectFactory.newInstance(SerializablePasswordCredentials::class.java)
-
-        serializablePasswordCredentials.username.set(username)
-        serializablePasswordCredentials.password.set(password)
-
-        return serializablePasswordCredentials
     }
 
     private fun Dependency.toSerializable(): SerializableDependency {

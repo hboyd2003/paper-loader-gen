@@ -33,5 +33,5 @@ internal abstract class SerializableMavenArtifactRepository {
     abstract val uri: Property<URI>
 
     @get:Input
-    abstract val credentials: Property<SerializablePasswordCredentials>
+    abstract val hasPasswordCredentials: Property<Boolean>
 }
