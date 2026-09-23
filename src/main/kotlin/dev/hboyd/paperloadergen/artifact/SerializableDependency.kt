@@ -23,10 +23,11 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Nested
 import javax.inject.Inject
 
 internal abstract class SerializableDependency @Inject constructor(
-    val providerFactory: ProviderFactory
+    private val providerFactory: ProviderFactory
 ) {
     @get:Input
     abstract val group: Property<String>
@@ -37,7 +38,7 @@ internal abstract class SerializableDependency @Inject constructor(
     @get:Input
     abstract val version: Property<String>
 
-    @get:Input
+    @get:Nested
     abstract val excludeRules: SetProperty<SerializableExcludeRule>
 
     fun coordinates(): Provider<String> {

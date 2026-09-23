@@ -20,6 +20,7 @@ package dev.hboyd.paperloadergen.artifact
 
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import java.net.URI
 
 /**
@@ -33,5 +34,6 @@ internal abstract class SerializableMavenArtifactRepository {
     abstract val uri: Property<URI>
 
     @get:Input
+    @get:Optional
     abstract val hasPasswordCredentials: Property<Boolean>
 }

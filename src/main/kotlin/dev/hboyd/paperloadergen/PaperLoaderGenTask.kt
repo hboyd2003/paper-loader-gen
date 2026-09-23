@@ -36,6 +36,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.artifacts.repositories.AuthenticationSupportedInternal
@@ -70,8 +71,8 @@ abstract class PaperLoaderGenTask @Inject constructor(
     /**
      * Repositories included in the loader.
      */
-    @get:Input
-    private val repositories: ListProperty<SerializableMavenArtifactRepository> =
+    @get:Nested
+    internal val repositories: ListProperty<SerializableMavenArtifactRepository> =
         objectFactory.listProperty(SerializableMavenArtifactRepository::class.java)
             .convention(project.provider {
                 project.repositories
@@ -86,8 +87,8 @@ abstract class PaperLoaderGenTask @Inject constructor(
     /**
      * Dependencies included in the loader.
      */
-    @get:Input
-    private val dependencies: ListProperty<SerializableDependency> =
+    @get:Nested
+    internal val dependencies: ListProperty<SerializableDependency> =
         objectFactory.listProperty(SerializableDependency::class.java)
             .convention(project.provider {
                 project.configurations.getByName("paperRuntime").dependencies
