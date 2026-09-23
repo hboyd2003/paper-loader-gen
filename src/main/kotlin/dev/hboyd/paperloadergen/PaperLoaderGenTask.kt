@@ -231,7 +231,6 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 import org.eclipse.aether.graph.Dependency;
                 import org.eclipse.aether.graph.Exclusion;
                 import org.eclipse.aether.repository.RemoteRepository;
-                import org.eclipse.aether.repository.LocalRepository;
                 import org.eclipse.aether.util.repository.AuthenticationBuilder;
                 import javax.annotation.processing.Generated;
                 import java.util.List;
