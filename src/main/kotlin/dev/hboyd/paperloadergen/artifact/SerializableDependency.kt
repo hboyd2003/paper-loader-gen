@@ -38,9 +38,6 @@ internal abstract class SerializableDependency @Inject constructor(
     abstract val version: Property<String>
 
     @get:Input
-    abstract val reason: Property<String>
-
-    @get:Input
     abstract val excludeRules: SetProperty<SerializableExcludeRule>
 
     fun coordinates(): Provider<String> {
