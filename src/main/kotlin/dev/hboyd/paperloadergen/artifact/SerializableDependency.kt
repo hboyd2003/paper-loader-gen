@@ -24,6 +24,7 @@ import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 import javax.inject.Inject
 
 internal abstract class SerializableDependency @Inject constructor(
@@ -39,6 +40,7 @@ internal abstract class SerializableDependency @Inject constructor(
     abstract val version: Property<String>
 
     @get:Nested
+    @get:Optional
     abstract val excludeRules: SetProperty<SerializableExcludeRule>
 
     fun coordinates(): Provider<String> {
