@@ -241,8 +241,8 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 @SuppressWarnings({"UnstableApiUsage", "unused"})
                 public final class ${classPath.get().substringAfterLast('.')} implements PluginLoader {
                     @Override
-                    public void classloader(PluginClasspathBuilder classpathBuilder) {
-                        MavenLibraryResolver resolver = new MavenLibraryResolver();
+                    public void classloader(final PluginClasspathBuilder classpathBuilder) {
+                        final MavenLibraryResolver resolver = new MavenLibraryResolver();
                         resolver.addRepository(new RemoteRepository.Builder("maven-central", "default", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());
                 """.trimIndent(),
             )
