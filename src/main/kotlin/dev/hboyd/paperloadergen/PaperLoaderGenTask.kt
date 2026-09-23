@@ -209,6 +209,12 @@ abstract class PaperLoaderGenTask @Inject constructor(
             .asFile
             .toPath()
 
+        if (dependencies.getOrNull().isNullOrEmpty()) {
+            logger.warn("Received no dependencies for task ${this.name}. No Paper loader will be generated.")
+            Files.deleteIfExists(outputFile) // Delete old loader
+            return
+        }
+
         Files.createDirectories(outputFile.parent)
 
         PrintWriter(FileWriter(outputFile.toFile())).use { writer ->

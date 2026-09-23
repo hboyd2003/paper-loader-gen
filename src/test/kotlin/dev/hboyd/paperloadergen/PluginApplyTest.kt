@@ -67,7 +67,7 @@ class PluginApplyTest {
 
     @Test
     fun `generated source includes maven central mirror repo`() {
-        writeGradleBuildFile(repositories = "")
+        writeGradleBuildFile(repositories = "", additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")")
 
         val gradleResult = executeGradleRun("generatePaperLoader")
         gradleResult.tasks.forEach {
@@ -83,7 +83,7 @@ class PluginApplyTest {
 
     @Test
     fun `generated source includes setting based repositories`() {
-        writeGradleBuildFile(repositories = "")
+        writeGradleBuildFile(repositories = "", additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")")
 
         PrintWriter(testProjectDir.resolve("settings.gradle").writer()).use {
             it.write(
@@ -162,6 +162,39 @@ class PluginApplyTest {
                 """        resolver.addDependency(new Dependency(new DefaultArtifact("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"), null, null, List.of(new Exclusion("net.kyori", "adventure-nbt", "*", "*"), new Exclusion("net.kyori", "adventure-api", "*", "*"))));""",
             )
         )
+    }
+
+    @Test
+    fun `no loader is generated when no dependencies are configured`() {
+        writeGradleBuildFile(dependencies = "", additionalDependencies = null)
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assert(
+            !testProjectDir
+                .resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java")
+                .exists()
+        ) { "Loader source should not have been generated when no dependencies are configured" }
+    }
+
+    @Test
+    fun `previously generated loader is removed once dependencies are removed`() {
+        writeGradleBuildFile(dependencies = "", additionalDependencies = null)
+
+        val generatedFile = testProjectDir
+            .resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java")
+        generatedFile.createParentDirectories()
+        generatedFile.writeText("stale loader from a previous run with dependencies configured")
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assert(!generatedFile.exists()) { "Stale loader source should have been removed once dependencies were removed" }
     }
 
     private fun writeGradleBuildFile(
