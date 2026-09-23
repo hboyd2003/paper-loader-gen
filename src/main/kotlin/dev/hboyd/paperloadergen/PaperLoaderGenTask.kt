@@ -345,6 +345,6 @@ abstract class PaperLoaderGenTask @Inject constructor(
     private fun String.toScreamingSnakeCase(): String {
         if (!contains("[a-z]".toRegex())) return replace('-', '_')
 
-        return replace("((?<!_-)[A-Z])|-".toRegex(), "_").uppercase()
+        return replace("(?<![-_]|^)(?=[A-Z])|[-_]".toRegex(), "_").uppercase()
     }
 }
