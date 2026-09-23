@@ -35,10 +35,8 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.artifacts.repositories.AuthenticationSupportedInternal
@@ -234,6 +232,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     import org.eclipse.aether.graph.Exclusion;
                     import org.eclipse.aether.repository.RemoteRepository;
                     import org.eclipse.aether.repository.LocalRepository;
+                    import org.eclipse.aether.util.repository.AuthenticationBuilder;
                     import org.jspecify.annotations.NonNull;
                     import javax.annotation.processing.Generated;
                     import java.util.List;
@@ -253,7 +252,24 @@ abstract class PaperLoaderGenTask @Inject constructor(
             )
 
             repositories.get().forEach {
-                writer.write("\n        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\").build());")
+                writer.write("\n        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\")")
+
+                if (it.credentials.isPresent) {
+                    val nameScreamingSnakeCase = it.name.get().toScreamingSnakeCase() + "_"
+
+                    writer.write(
+                        """
+                        
+                        .setAuthentication(new AuthenticationBuilder()
+                                .addUsername(System.getenv("${nameScreamingSnakeCase + "REPO_USERNAME"}"))
+                                .addPassword(System.getenv("${nameScreamingSnakeCase + "REPO_PASSWORD"}"))
+                                .build())
+                                        
+                        """.trimIndent().prependIndent("                ")
+                    )
+                }
+
+                writer.write(".build());")
             }
 
             writer.write("\n")
@@ -266,16 +282,16 @@ abstract class PaperLoaderGenTask @Inject constructor(
                         """new Exclusion("${excludeRule.group.getOrElse("*")}", "${excludeRule.module.getOrElse("*")}", "*", "*")"""
                     }
                 }
-                writer.write("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, ${exclusionsString}));")
+                writer.write("\n        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, $exclusionsString));")
             }
 
             writer.write(
                 """
-                    
-                    
-                            classpathBuilder.addLibrary(resolver);
-                        }
+                
+                
+                        classpathBuilder.addLibrary(resolver);
                     }
+                }
                 """.trimIndent()
             )
         }
@@ -328,5 +344,11 @@ abstract class PaperLoaderGenTask @Inject constructor(
         serializableExcludeRule.module.set(this.module)
 
         return serializableExcludeRule
+    }
+
+    private fun String.toScreamingSnakeCase(): String {
+        if (!contains("[a-z]".toRegex())) return this
+
+        return replace("((?<!_-)[A-Z])|-".toRegex(), "_").uppercase()
     }
 }

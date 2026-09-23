@@ -36,7 +36,7 @@ import kotlin.io.path.*
 @OptIn(ExperimentalPathApi::class)
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class PluginApplyTest {
-    @field:TempDir(cleanup = CleanupMode.ON_SUCCESS)
+    @field:TempDir(cleanup = CleanupMode.NEVER)
     lateinit var testProjectDir: Path
 
     @BeforeEach
@@ -160,6 +160,38 @@ class PluginApplyTest {
         assertGeneratedSourceContainsLines(
             setOf(
                 """        resolver.addDependency(new Dependency(new DefaultArtifact("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"), null, null, List.of(new Exclusion("net.kyori", "adventure-nbt", "*", "*"), new Exclusion("net.kyori", "adventure-api", "*", "*"))));""",
+            )
+        )
+    }
+
+    @Test
+    fun `generated source includes password credentials`() {
+        writeGradleBuildFile(
+            repositories =
+                """
+                maven {
+                    name = "hboyd-dev-repo"
+                    url = "https://repo.hboyd.dev/snapshots/"
+                    credentials {
+                        username = "myUsername"
+                        password = "myPassword"
+                    }
+                }
+                """.trimIndent(),
+            additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")"
+        )
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsLines(
+            setOf(
+                "                .setAuthentication(new AuthenticationBuilder()",
+                "                        .addUsername(System.getenv(\"HBOYD_DEV_REPO_REPO_USERNAME\"))",
+                "                        .addPassword(System.getenv(\"HBOYD_DEV_REPO_REPO_PASSWORD\"))",
+                "                        .build())"
             )
         )
     }
