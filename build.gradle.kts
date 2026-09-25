@@ -1,4 +1,5 @@
 plugins {
+    idea
     alias(libs.plugins.kotlin)
     alias(libs.plugins.pluginPublish)
     alias(libs.plugins.indra)
@@ -56,7 +57,7 @@ indraPluginPublishing {
         project.name,
         "dev.hboyd.paperloadergen.PaperLoaderGen",
         "Paper Loader Gen",
-        "Gradle plugin to automatically generate Minecraft Paper loader classes.",
+        "Automatically generates Paper loader classes for Minecraft: Java Edition.",
         listOf("minecraft", "paper", "codegen")
     )
     website("https://github.com/hboyd2003/paper-loader-gen")
@@ -69,5 +70,12 @@ tasks {
 
     processResources {
         expand(mapOf("version" to version))
+    }
+}
+
+idea {
+    module {
+        isDownloadSources = true
+        isDownloadJavadoc = true
     }
 }
