@@ -6,7 +6,7 @@ configured dependencies and repositories.
 
 ## Usage
 
-Apply plugin
+### Apply plugin
 
 ```groovy
 plugins {
@@ -14,22 +14,74 @@ plugins {
 }
 ```
 
-Configure task
+### Configure the task
 
 ```groovy
 tasks {
-    generatePaperLoaderGen {
-        classPath = "fully.qualified.path.to.generated.class"
-        additionalDependencies.add("additional.dependency:1.0.0")
+    generatePaperLoader {
+        // Required: fully qualified name of the generated loader class
+        classPath = "com.example.myplugin.MyPluginLoader"
+
+        // Change where the source is generated to
+        // Defaults to "build/generated/sources/<task name>/java/main"
+        generatedSrcRoot = layout.buildDirectory.dir("generated/sources/paperLoader")
+
+        // Replace all repositories
+        setRepositories(project.repositories.withType(MavenArtifactRepository).matching { it.name == "papermc-repo" })
+
+        // Or add a repository
+        addRepository(project.repositories.maven {
+            name = "extra-repo"
+            url = "https://repo.example.com/releases"
+            mavenContent { releasesOnly() } // Content type is also respected
+        })
+
+        // Replace the paperRuntime dependencies with another configuration's dependencies
+        setDependencies(configurations.named("myLibraries").map { it.dependencies })
+
+        // Or add a dependency
+        addDependency(project.dependencies.create("org.jspecify:jspecify:1.0.0"))
     }
 }
 ```
 
-Include dependencies by using the `paperRuntime` dependency configuration
+By default, the loader includes every HTTP(S) Maven repository declared in the project or settings (excluding maven
+central), and every dependency declared in the `paperRuntime` scope. Maven Central is always included through Paper's
+default mirror.
+
+If the task ends up with no dependencies, no loader is generated.
+
+Include dependencies by using the `paperRuntime` dependency configuration. Repositories already declared in the project,
+or in `settings.gradle`'s `dependencyResolutionManagement`, are picked up automatically, so there's usually nothing else
+to configure.
 
 ```groovy
 dependencies {
     paperRuntime("org.jspecify:jspecify:1.0.0")
+
+    // Exclusions are respected
+    paperRuntime("com.example:some-library:1.0.0") {
+        exclude group: "com.example", module: "unwanted-transitive-dependency"
+    }
+}
+```
+
+Repositories that require password credentials are also supported. The generated loader pulls the credentials from the
+environment. The environment variable are based off of the repository name/id converted into snake case and appended
+with either `_REPO_USERNAME` or `_REPO_PASSWORD` for the username and password respectively.
+
+```groovy
+repositories {
+    maven {
+        name = "example-private"
+        url = "https://repo.example.com/private"
+        credentials {
+            // Loader reads these from the EXAMPLE_PRIVATE_REPO_USERNAME and
+            // EXAMPLE_PRIVATE_REPO_PASSWORD environment variables at runtime
+            username = "placeholder"
+            password = "placeholder"
+        }
+    }
 }
 ```
 
