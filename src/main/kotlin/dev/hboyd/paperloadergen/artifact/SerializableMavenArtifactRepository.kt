@@ -36,4 +36,12 @@ internal abstract class SerializableMavenArtifactRepository {
     @get:Input
     @get:Optional
     abstract val hasPasswordCredentials: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    abstract val snapshots: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    abstract val releases: Property<Boolean>
 }

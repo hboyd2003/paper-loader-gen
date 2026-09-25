@@ -182,6 +182,82 @@ class PluginApplyTest {
     }
 
     @Test
+    fun `generated source disables releases with policy when maven content is snapshots only`() {
+        writeGradleBuildFile(repositories = "", additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")")
+
+        PrintWriter(testProjectDir.resolve("settings.gradle").writer()).use {
+            it.write(
+                """
+                dependencyResolutionManagement {
+                    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+                    repositories {
+                        mavenCentral()
+                        maven {
+                            name = "papermc-repo"
+                            url = "https://repo.papermc.io/repository/maven-public/"
+                        }
+                        maven {
+                            name = "hboyd-dev-repo"
+                            url = "https://repo.hboyd.dev/snapshots/"
+                            mavenContent { snapshotsOnly() }
+                        }
+                    }
+                }
+            """.trimIndent())
+        }
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsText(
+            """
+            |        resolver.addRepository(new RemoteRepository.Builder("hboyd-dev-repo", "default", "https://repo.hboyd.dev/snapshots/")
+            |                .setReleasePolicy(DEFAULT_DISABLED_POLICY)
+            |                .build());""".trimMargin()
+        )
+    }
+
+    @Test
+    fun `generated source disables snapshots with policy when maven content is releases only`() {
+        writeGradleBuildFile(repositories = "", additionalDependencies = "paperRuntime(\"org.jspecify:jspecify:1.0.1\")")
+
+        PrintWriter(testProjectDir.resolve("settings.gradle").writer()).use {
+            it.write(
+                """
+                dependencyResolutionManagement {
+                    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+                    repositories {
+                        mavenCentral()
+                        maven {
+                            name = "papermc-repo"
+                            url = "https://repo.papermc.io/repository/maven-public/"
+                        }
+                        maven {
+                            name = "hboyd-dev-repo"
+                            url = "https://repo.hboyd.dev/snapshots/"
+                            mavenContent { releasesOnly() }
+                        }
+                    }
+                }
+            """.trimIndent())
+        }
+
+        val gradleResult = executeGradleRun("generatePaperLoader")
+        gradleResult.tasks.forEach {
+            assert(it.outcome != TaskOutcome.FAILED)
+        }
+
+        assertGeneratedSourceContainsText(
+            """
+            |        resolver.addRepository(new RemoteRepository.Builder("hboyd-dev-repo", "default", "https://repo.hboyd.dev/snapshots/")
+            |                .setSnapshotPolicy(DEFAULT_DISABLED_POLICY)
+            |                .build());""".trimMargin()
+        )
+    }
+
+    @Test
     fun `no loader is generated when no dependencies are configured`() {
         writeGradleBuildFile(dependencies = "", additionalDependencies = null)
 

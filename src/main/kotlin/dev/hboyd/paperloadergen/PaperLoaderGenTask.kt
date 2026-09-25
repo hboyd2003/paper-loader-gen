@@ -26,10 +26,12 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExcludeRule
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor
 import org.gradle.api.credentials.PasswordCredentials
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.internal.GradleInternal
+import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -47,6 +49,9 @@ import java.nio.file.Path
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+import kotlin.reflect.KMutableProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.time.Clock
 import kotlin.time.toJavaInstant
 
@@ -215,6 +220,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
 
         Files.createDirectories(outputFile.parent)
         var needAuthenticationBuilderImport = false
+        var needDisabledPolicyVarAndImports = false;
         val repositoryAddsString = repositories.get().map {
             var repositoryAddString = "|        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\")"
 
@@ -226,9 +232,25 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     |                .setAuthentication(new AuthenticationBuilder()
                     |                        .addUsername(System.getenv("${nameScreamingSnakeCase + "REPO_USERNAME"}"))
                     |                        .addPassword(System.getenv("${nameScreamingSnakeCase + "REPO_PASSWORD"}"))
-                    |                        .build())
-                    |                """
+                    |                        .build())"""
             }
+
+            if (it.releases.orNull == false) {
+                repositoryAddString +=
+                    """
+                    |                .setReleasePolicy(DEFAULT_DISABLED_POLICY)"""
+                needDisabledPolicyVarAndImports = true
+            }
+
+            if (it.snapshots.orNull == false) {
+                repositoryAddString +=
+                    """
+                    |                .setSnapshotPolicy(DEFAULT_DISABLED_POLICY)"""
+                needDisabledPolicyVarAndImports = true
+            }
+
+            if (needAuthenticationBuilderImport || needDisabledPolicyVarAndImports)
+                repositoryAddString += "\n                "
 
             repositoryAddString += ".build());"
             return@map repositoryAddString
@@ -247,8 +269,17 @@ abstract class PaperLoaderGenTask @Inject constructor(
             dependenciesStringBuilder.append("|        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, $exclusionsString));")
         }
 
-        val authenticationBuilderImport =
-            if (needAuthenticationBuilderImport) "\n|import org.eclipse.aether.util.repository.AuthenticationBuilder;"
+        val additionalImports: ArrayList<String> = ArrayList()
+        if (needDisabledPolicyVarAndImports) additionalImports.add("|import org.eclipse.aether.repository.RepositoryPolicy;")
+        if (needAuthenticationBuilderImport) additionalImports.add("|import org.eclipse.aether.util.repository.AuthenticationBuilder;")
+
+        val disabledPolicyString =
+            if (needDisabledPolicyVarAndImports)
+                """
+                |    private static final RepositoryPolicy DEFAULT_DISABLED_POLICY = new RepositoryPolicy(false,
+                |            RepositoryPolicy.UPDATE_POLICY_DAILY,
+                |            RepositoryPolicy.CHECKSUM_POLICY_WARN);
+                |"""
             else ""
 
         PrintWriter(FileWriter(outputFile.toFile())).use { writer ->
@@ -267,13 +298,13 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 |import org.eclipse.aether.artifact.DefaultArtifact;
                 |import org.eclipse.aether.graph.Dependency;
                 |import org.eclipse.aether.graph.Exclusion;
-                |import org.eclipse.aether.repository.RemoteRepository;$authenticationBuilderImport
+                |import org.eclipse.aether.repository.RemoteRepository;${additionalImports.joinToString("\n", "\n")}
                 |import javax.annotation.processing.Generated;
                 |import java.util.List;
                 |
                 |@Generated(value = "dev.hboyd.paperloadergen.PaperLoaderGenerationTask", date = "$timestamp", comments = "Version: ${PaperLoaderGen.pluginVersion()}")
                 |@SuppressWarnings({"UnstableApiUsage", "unused"})
-                |public final class ${classPath.get().substringAfterLast('.')} implements PluginLoader {
+                |public final class ${classPath.get().substringAfterLast('.')} implements PluginLoader {$disabledPolicyString
                 |    @Override
                 |    public void classloader(final PluginClasspathBuilder classpathBuilder) {
                 |        final MavenLibraryResolver resolver = new MavenLibraryResolver();
@@ -303,6 +334,19 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 return@map false
             }
             serializableMavenArtifactRepository.hasPasswordCredentials.set(hasPasswordCredentialsProvider)
+        }
+
+        if (this is DefaultMavenArtifactRepository && repositoryDescriptorCopy is MavenRepositoryContentDescriptor) {
+            // TODO: Hope maven release and snapshot repository content descriptors become accessible and replace this reflection
+            @Suppress("UNCHECKED_CAST") val snapshotsProperty = repositoryDescriptorCopy::class.declaredMemberProperties
+                .find { property -> property.name == "snapshots" } as KMutableProperty1<Any, Boolean>
+            snapshotsProperty.isAccessible = true
+            serializableMavenArtifactRepository.snapshots.set(snapshotsProperty.get(repositoryDescriptorCopy))
+
+            @Suppress("UNCHECKED_CAST") val releasesProperty = repositoryDescriptorCopy::class.declaredMemberProperties
+                .find { property -> property.name == "releases" } as KMutableProperty1<Any, Boolean>
+            releasesProperty.isAccessible = true
+            serializableMavenArtifactRepository.releases.set(releasesProperty.get(repositoryDescriptorCopy))
         }
 
         return serializableMavenArtifactRepository
