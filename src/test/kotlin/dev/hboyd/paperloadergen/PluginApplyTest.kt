@@ -21,6 +21,7 @@ package dev.hboyd.paperloadergen
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -74,11 +75,7 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assertGeneratedSourceContainsLines(
-            setOf(
-                "        resolver.addRepository(new RemoteRepository.Builder(\"maven-central\", \"default\", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());"
-            )
-        )
+        assertGeneratedSourceContainsText("        resolver.addRepository(new RemoteRepository.Builder(\"maven-central\", \"default\", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());")
     }
 
     @Test
@@ -110,12 +107,8 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assertGeneratedSourceContainsLines(
-            setOf(
-                "        resolver.addRepository(new RemoteRepository.Builder(\"papermc-repo\", \"default\", \"https://repo.papermc.io/repository/maven-public/\").build());",
-                "        resolver.addRepository(new RemoteRepository.Builder(\"hboyd-dev-repo\", \"default\", \"https://repo.hboyd.dev/snapshots/\").build());"
-            )
-        )
+        assertGeneratedSourceContainsText("        resolver.addRepository(new RemoteRepository.Builder(\"papermc-repo\", \"default\", \"https://repo.papermc.io/repository/maven-public/\").build());")
+        assertGeneratedSourceContainsText("        resolver.addRepository(new RemoteRepository.Builder(\"hboyd-dev-repo\", \"default\", \"https://repo.hboyd.dev/snapshots/\").build());")
     }
 
     @Test
@@ -130,12 +123,8 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assertGeneratedSourceContainsLines(
-            setOf(
-                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null, null, null));",
-                "        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.1\"), null, null, null));"
-            )
-        )
+        assertGeneratedSourceContainsText("        resolver.addDependency(new Dependency(new DefaultArtifact(\"net.kyori:adventure-api:4.26.1\"), null, null, null));")
+        assertGeneratedSourceContainsText("        resolver.addDependency(new Dependency(new DefaultArtifact(\"org.jspecify:jspecify:1.0.1\"), null, null, null));")
         assertGeneratedSourceDoesNotContainLines(
             setOf(
                 "        resolver.addDependency(new Dependency(new DefaultArtifact(\"io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT\"), null, null, null));"
@@ -157,11 +146,7 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assertGeneratedSourceContainsLines(
-            setOf(
-                """        resolver.addDependency(new Dependency(new DefaultArtifact("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"), null, null, List.of(new Exclusion("net.kyori", "adventure-nbt", "*", "*"), new Exclusion("net.kyori", "adventure-api", "*", "*"))));""",
-            )
-        )
+        assertGeneratedSourceContainsText("""        resolver.addDependency(new Dependency(new DefaultArtifact("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"), null, null, List.of(new Exclusion("net.kyori", "adventure-nbt", "*", "*"), new Exclusion("net.kyori", "adventure-api", "*", "*"))));""",)
     }
 
     @Test
@@ -186,13 +171,13 @@ class PluginApplyTest {
             assert(it.outcome != TaskOutcome.FAILED)
         }
 
-        assertGeneratedSourceContainsLines(
-            setOf(
-                "                .setAuthentication(new AuthenticationBuilder()",
-                "                        .addUsername(System.getenv(\"HBOYD_DEV_REPO_REPO_USERNAME\"))",
-                "                        .addPassword(System.getenv(\"HBOYD_DEV_REPO_REPO_PASSWORD\"))",
-                "                        .build())"
-            )
+        assertGeneratedSourceContainsText(
+                """
+                |        resolver.addRepository(new RemoteRepository.Builder("hboyd-dev-repo", "default", "https://repo.hboyd.dev/snapshots/")
+                |                .setAuthentication(new AuthenticationBuilder()
+                |                        .addUsername(System.getenv("HBOYD_DEV_REPO_REPO_USERNAME"))
+                |                        .addPassword(System.getenv("HBOYD_DEV_REPO_REPO_PASSWORD"))
+                |                        .build())""".trimMargin()
         )
     }
 
@@ -282,14 +267,10 @@ class PluginApplyTest {
         }
     }
 
-    private fun assertGeneratedSourceContainsLines(lines: Set<String>) {
-        val unseenLines = lines.toMutableList()
-        unseenLines.removeAll(Files.lines(testProjectDir
-            .resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java")).toList())
-
-        assert(unseenLines.isEmpty()) {
-            "Generated source did not include expected lines: ${unseenLines.joinToString("\", ", "[\"", "\"]")}"
-        }
+    private fun assertGeneratedSourceContainsText(text: String) {
+        val generatedSourceText = Files.readString(testProjectDir
+            .resolve("build/generated/sources/generatePaperLoader/java/main/dev/hboyd/testplugin/TestPluginLoader.java"))
+        Assertions.assertTrue(generatedSourceText.contains(text), "Generated source did not contain: $text")
     }
 
     private fun assertGeneratedSourceDoesNotContainLines(lines: Set<String>) {
