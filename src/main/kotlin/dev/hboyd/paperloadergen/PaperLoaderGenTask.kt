@@ -219,20 +219,24 @@ abstract class PaperLoaderGenTask @Inject constructor(
         }
 
         Files.createDirectories(outputFile.parent)
+
+        // Build repositories
         var needAuthenticationBuilderImport = false
         var needDisabledPolicyVarAndImports = false;
         val repositoryAddsString = repositories.get().map {
+            var buildOnNewLine = false
             var repositoryAddString = "|        resolver.addRepository(new RemoteRepository.Builder(\"${it.name.get()}\", \"default\", \"${it.uri.get()}\")"
 
             if (it.hasPasswordCredentials.getOrElse(false)) {
                 val nameScreamingSnakeCase = it.name.get().toScreamingSnakeCase() + "_"
-                needAuthenticationBuilderImport = true
                 repositoryAddString +=
                     """
                     |                .setAuthentication(new AuthenticationBuilder()
                     |                        .addUsername(System.getenv("${nameScreamingSnakeCase + "REPO_USERNAME"}"))
                     |                        .addPassword(System.getenv("${nameScreamingSnakeCase + "REPO_PASSWORD"}"))
                     |                        .build())"""
+                needAuthenticationBuilderImport = true
+                buildOnNewLine = true
             }
 
             if (it.releases.orNull == false) {
@@ -240,6 +244,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     """
                     |                .setReleasePolicy(DEFAULT_DISABLED_POLICY)"""
                 needDisabledPolicyVarAndImports = true
+                buildOnNewLine = true
             }
 
             if (it.snapshots.orNull == false) {
@@ -247,15 +252,16 @@ abstract class PaperLoaderGenTask @Inject constructor(
                     """
                     |                .setSnapshotPolicy(DEFAULT_DISABLED_POLICY)"""
                 needDisabledPolicyVarAndImports = true
+                buildOnNewLine = true
             }
 
-            if (needAuthenticationBuilderImport || needDisabledPolicyVarAndImports)
-                repositoryAddString += "\n                "
+            if (buildOnNewLine) repositoryAddString += "\n                "
 
             repositoryAddString += ".build());"
             return@map repositoryAddString
         }.joinToString("\n")
 
+        // Build dependencies
         val dependenciesStringBuilder = StringBuilder()
         dependencies.get().forEach {
             var exclusionsString = "null"
@@ -269,6 +275,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
             dependenciesStringBuilder.append("|        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, $exclusionsString));")
         }
 
+        // Add extras
         val additionalImports: ArrayList<String> = ArrayList()
         if (needDisabledPolicyVarAndImports) additionalImports.add("|import org.eclipse.aether.repository.RepositoryPolicy;")
         if (needAuthenticationBuilderImport) additionalImports.add("|import org.eclipse.aether.util.repository.AuthenticationBuilder;")
@@ -282,6 +289,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 |"""
             else ""
 
+        // Write full loader
         PrintWriter(FileWriter(outputFile.toFile())).use { writer ->
             val timestamp: String = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.of("UTC")).format(Clock.System.now().toJavaInstant())
             writer.write(
