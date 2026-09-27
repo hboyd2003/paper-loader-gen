@@ -263,6 +263,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
 
         // Build dependencies
         val dependenciesStringBuilder = StringBuilder()
+        var needsExclusionAndListImport = false
         dependencies.get().forEach {
             var exclusionsString = "null"
             val excludeRules = it.excludeRules.get()
@@ -270,15 +271,28 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 exclusionsString = excludeRules.joinToString(", ", "List.of(", ")") { excludeRule ->
                     """new Exclusion("${excludeRule.group.getOrElse("*")}", "${excludeRule.module.getOrElse("*")}", "*", "*")"""
                 }
+                needsExclusionAndListImport = true
             }
             if (dependenciesStringBuilder.isNotEmpty()) dependenciesStringBuilder.append("\n")
             dependenciesStringBuilder.append("|        resolver.addDependency(new Dependency(new DefaultArtifact(\"${it.coordinates().get()}\"), null, null, $exclusionsString));")
         }
 
-        // Add extras
-        val additionalImports: ArrayList<String> = ArrayList()
-        if (needDisabledPolicyVarAndImports) additionalImports.add("|import org.eclipse.aether.repository.RepositoryPolicy;")
-        if (needAuthenticationBuilderImport) additionalImports.add("|import org.eclipse.aether.util.repository.AuthenticationBuilder;")
+        var importsString =
+            """
+            |import io.papermc.paper.plugin.loader.PluginClasspathBuilder;
+            |import io.papermc.paper.plugin.loader.PluginLoader;
+            |import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
+            |import org.eclipse.aether.artifact.DefaultArtifact;
+            |import org.eclipse.aether.graph.Dependency;"""
+
+        if (needsExclusionAndListImport) importsString += "\n|import org.eclipse.aether.graph.Exclusion;"
+
+        importsString += "\n|import org.eclipse.aether.repository.RemoteRepository;"
+
+        if (needDisabledPolicyVarAndImports) importsString += "\n|import org.eclipse.aether.repository.RepositoryPolicy;"
+        if (needAuthenticationBuilderImport) importsString += "\n|import org.eclipse.aether.util.repository.AuthenticationBuilder;"
+        importsString += "\n|import javax.annotation.processing.Generated;"
+        if (needsExclusionAndListImport) importsString += "\n|import java.util.List;"
 
         val disabledPolicyString =
             if (needDisabledPolicyVarAndImports)
@@ -300,15 +314,7 @@ abstract class PaperLoaderGenTask @Inject constructor(
                 |
                 |package ${classPath.get().substringBeforeLast('.')};
                 |
-                |import io.papermc.paper.plugin.loader.PluginClasspathBuilder;
-                |import io.papermc.paper.plugin.loader.PluginLoader;
-                |import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
-                |import org.eclipse.aether.artifact.DefaultArtifact;
-                |import org.eclipse.aether.graph.Dependency;
-                |import org.eclipse.aether.graph.Exclusion;
-                |import org.eclipse.aether.repository.RemoteRepository;${additionalImports.joinToString("\n", "\n")}
-                |import javax.annotation.processing.Generated;
-                |import java.util.List;
+                $importsString
                 |
                 |@Generated(value = "dev.hboyd.paperloadergen.PaperLoaderGenerationTask", date = "$timestamp", comments = "Version: ${PaperLoaderGen.pluginVersion()}")
                 |@SuppressWarnings({"UnstableApiUsage", "unused"})
